@@ -10,6 +10,7 @@
         "rails"
     ],
     "type": "library",
+    "license": "MIT",
     "homepage": "https://github.com/GGermanBoldyrev/laravel-schema-file",
     "authors": [
         {
@@ -26,6 +27,13 @@
     "autoload": {
         "psr-4": {
             "GGermanBoldyrev\\SchemaFile\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "GGermanBoldyrev\\SchemaFile\\SchemaFileServiceProvider"
+            ]
         }
     },
     "minimum-stability": "stable",

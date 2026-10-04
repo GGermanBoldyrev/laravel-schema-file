@@ -27,3 +27,7 @@ Laravel Schema File brings the Rails approach to Laravel:
 | Database | MySQL, MariaDB, PostgreSQL, SQLite |
 
 The package relies on Laravel's native schema introspection (`Schema::getTables()`, `getColumns()`, `getIndexes()`, `getForeignKeys()`), so it needs no `doctrine/dbal`. Only Laravel versions that still receive fixes are supported.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
