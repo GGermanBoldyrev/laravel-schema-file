@@ -53,6 +53,12 @@ return [
 
 ## Usage
 
+In the `local` environment there is nothing to run: the schema file is rewritten every time you run `migrate`, `migrate:rollback`, `migrate:fresh` or any other migration command. It is left alone by `--pretend`, and by migrations run on a connection other than the one the file describes.
+
+Everywhere else — tests, CI, production — the file is never touched automatically. If it could not be written, the migration command still succeeds and a warning goes to the log.
+
+To write the file by hand:
+
 ```bash
 php artisan schema:generate
 ```
@@ -84,6 +90,7 @@ The defaults work without any setup. Each setting can be changed in `.env`:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
+| `SCHEMA_FILE_ENABLED` | `true` in `local`, otherwise `false` | Whether migrations rewrite the schema file. |
 | `SCHEMA_FILE_PATH` | `database/schema.php` | Where the schema file is written. |
 | `SCHEMA_FILE_CONNECTION` | the default connection | The connection whose schema is written. |
 

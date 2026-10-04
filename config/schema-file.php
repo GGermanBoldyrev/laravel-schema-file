@@ -4,6 +4,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Automatic Generation
+    |--------------------------------------------------------------------------
+    |
+    | Whether the schema file is rewritten after migrations run or are
+    | rolled back. Null means only in the "local" environment, so that
+    | tests, CI and production never touch the file. The schema:generate
+    | command works regardless of this setting.
+    |
+    */
+
+    'enabled' => env('SCHEMA_FILE_ENABLED'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Schema File Path
     |--------------------------------------------------------------------------
     |

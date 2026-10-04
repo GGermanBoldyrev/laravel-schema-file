@@ -5,14 +5,17 @@ declare(strict_types=1);
 namespace GGermanBoldyrev\SchemaFile;
 
 use GGermanBoldyrev\SchemaFile\Console\SchemaFileCommand;
+use GGermanBoldyrev\SchemaFile\Listeners\GenerateSchemaFile;
 use GGermanBoldyrev\SchemaFile\Mapper\ColumnMapperRegistry;
 use GGermanBoldyrev\SchemaFile\Mapper\Drivers\SqliteColumnMapper;
 use Illuminate\Config\Repository;
+use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * Wires the package into a Laravel application: its config, its settings object, its column mappers and its command.
+ * Wires the package into a Laravel application: its config, its settings object, its column mappers, its command and its migration listener.
  */
 final class SchemaFileServiceProvider extends ServiceProvider
 {
@@ -27,7 +30,10 @@ final class SchemaFileServiceProvider extends ServiceProvider
         // Built on every resolution, so a config value changed at runtime is picked up.
         $this->app->bind(
             SchemaFileConfig::class,
-            fn (Application $app): SchemaFileConfig => SchemaFileConfig::fromRepository($app->make(Repository::class)),
+            fn (Application $app): SchemaFileConfig => SchemaFileConfig::fromRepository(
+                $app->make(Repository::class),
+                local: $app->environment('local') === true,
+            ),
         );
 
         // Extend this binding to support another database driver or replace a mapper.
@@ -46,6 +52,7 @@ final class SchemaFileServiceProvider extends ServiceProvider
         }
 
         $this->registerCommands();
+        $this->registerListeners();
         $this->registerPublishing();
     }
 
@@ -54,6 +61,16 @@ final class SchemaFileServiceProvider extends ServiceProvider
         $this->commands([
             SchemaFileCommand::class,
         ]);
+    }
+
+    private function registerListeners(): void
+    {
+        // Captured now, before any migration command temporarily changes the default connection.
+        $this->app->when(GenerateSchemaFile::class)
+            ->needs('$defaultConnection')
+            ->give($this->app->make(Repository::class)->string('database.default'));
+
+        $this->app->make(Dispatcher::class)->listen(MigrationsEnded::class, GenerateSchemaFile::class);
     }
 
     private function registerPublishing(): void
