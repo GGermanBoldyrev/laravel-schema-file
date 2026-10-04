@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace GGermanBoldyrev\SchemaFile\Listeners;
 
+use GGermanBoldyrev\SchemaFile\Console\ConsoleNotifier;
+use GGermanBoldyrev\SchemaFile\GenerationResult;
 use GGermanBoldyrev\SchemaFile\SchemaFileConfig;
 use GGermanBoldyrev\SchemaFile\SchemaFileGenerator;
 use Illuminate\Database\DatabaseManager;
@@ -28,6 +30,7 @@ final readonly class GenerateSchemaFile
         private SchemaFileConfig $config,
         private DatabaseManager $connections,
         private LoggerInterface $logger,
+        private ConsoleNotifier $console,
         private string $defaultConnection,
     ) {
     }
@@ -41,11 +44,19 @@ final readonly class GenerateSchemaFile
         // The migrations have already been applied: a schema file that could not
         // be written must not make them look like they failed.
         try {
-            $this->generator->generate($this->config);
+            $result = $this->generator->generate($this->config);
         } catch (Throwable $exception) {
             $this->logger->warning('The schema file could not be written after running migrations.', [
                 'exception' => $exception,
             ]);
+
+            $this->console->warn("The schema file was not written. {$exception->getMessage()}");
+
+            return;
+        }
+
+        if ($result === GenerationResult::Written) {
+            $this->console->info("Schema file written to [{$this->config->path}].");
         }
     }
 
