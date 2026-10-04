@@ -6,6 +6,7 @@ namespace GGermanBoldyrev\SchemaFile\Mapper\Drivers;
 
 use GGermanBoldyrev\SchemaFile\Contracts\ColumnMapper;
 use GGermanBoldyrev\SchemaFile\Mapper\AbstractColumnMapper;
+use GGermanBoldyrev\SchemaFile\Mapper\TableContext;
 use GGermanBoldyrev\SchemaFile\Schema\Expression;
 
 /**
@@ -43,9 +44,40 @@ final readonly class SqliteColumnMapper extends AbstractColumnMapper
         return self::METHODS[$column['type_name']] ?? null;
     }
 
-    protected function isId(array $column): bool
+    /**
+     * SQLite reports every integer primary key as auto-incrementing, because each one
+     * aliases the row id. What $table->id() creates is narrower: a column declared
+     * AUTOINCREMENT, and only the table's own definition says whether it was.
+     */
+    protected function isId(array $column, TableContext $table): bool
     {
-        return $column['type_name'] === 'integer' && $column['auto_increment'];
+        return $column['type_name'] === 'integer'
+            && $column['auto_increment']
+            && $this->declaresAutoIncrement($table);
+    }
+
+    /**
+     * A table can have at most one AUTOINCREMENT column, so finding the keyword
+     * anywhere in its definition, outside of names, strings and comments, is enough.
+     */
+    private function declaresAutoIncrement(TableContext $table): bool
+    {
+        $sql = $table->connection->scalar(
+            "select sql from sqlite_master where type = 'table' and name = ?",
+            [$table->prefixedName()],
+        );
+
+        if (! is_string($sql)) {
+            return false;
+        }
+
+        $code = preg_replace(
+            ['/--[^\n]*/', '~/\*.*?\*/~s', "/'(?:[^']|'')*'/", '/"(?:[^"]|"")*"/', '/`[^`]*`/', '/\[[^\]]*\]/'],
+            ' ',
+            $sql,
+        );
+
+        return preg_match('/\bautoincrement\b/i', (string) $code) === 1;
     }
 
     /**
@@ -59,8 +91,9 @@ final readonly class SqliteColumnMapper extends AbstractColumnMapper
             return null;
         }
 
-        if (strlen($default) >= 2 && str_starts_with($default, "'") && str_ends_with($default, "'")) {
-            return $this->literal(str_replace("''", "'", substr($default, 1, -1)), $method);
+        // One string literal and nothing else: 'a' || 'b' also starts and ends with a quote.
+        if (preg_match("/^'((?:[^']|'')*)'$/s", $default, $matches) === 1) {
+            return $this->literal(str_replace("''", "'", $matches[1]), $method);
         }
 
         if (is_numeric($default)) {

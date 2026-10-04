@@ -143,9 +143,15 @@ final readonly class SchemaRenderer
             $line .= '->autoIncrement()';
         }
 
-        if ($column->nullable) {
-            $line .= '->nullable()';
+        if ($column->virtualAs !== null) {
+            $line .= '->virtualAs('.$this->export($column->virtualAs).')';
         }
+
+        if ($column->storedAs !== null) {
+            $line .= '->storedAs('.$this->export($column->storedAs).')';
+        }
+
+        $line .= $this->renderNullability($column);
 
         if ($column->default !== null) {
             $line .= '->default('.$this->export($column->default).')';
@@ -160,6 +166,19 @@ final readonly class SchemaRenderer
         }
 
         return $line.';';
+    }
+
+    /**
+     * An ordinary column is NOT NULL unless marked nullable; a generated one is
+     * nullable unless marked otherwise. Only the departure from that is written.
+     */
+    private function renderNullability(Column $column): string
+    {
+        if ($column->isGenerated()) {
+            return $column->nullable ? '' : '->nullable(false)';
+        }
+
+        return $column->nullable ? '->nullable()' : '';
     }
 
     private function renderIndex(Table $table, Index $index): string
@@ -263,6 +282,7 @@ final readonly class SchemaRenderer
                 || $column->unsigned
                 || $column->default !== null
                 || $column->comment !== null
+                || $column->isGenerated()
                 || isset($inline[$column->name])) {
                 return false;
             }

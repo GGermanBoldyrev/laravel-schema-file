@@ -2,3 +2,5 @@
 composer.lock
 .phpunit.cache/
 .phpunit.result.cache
+composer.local.json
+composer.local.lock

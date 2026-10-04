@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GGermanBoldyrev\SchemaFile\Console;
 
+use GGermanBoldyrev\SchemaFile\Exceptions\UnsupportedDriverException;
 use GGermanBoldyrev\SchemaFile\GenerationResult;
 use GGermanBoldyrev\SchemaFile\SchemaFileConfig;
 use GGermanBoldyrev\SchemaFile\SchemaFileGenerator;
@@ -35,10 +36,20 @@ final class SchemaFileCommand extends Command
             connection: $this->stringOption('database'),
         );
 
-        if ($this->option('check')) {
-            return $this->check($generator, $config);
-        }
+        // Not a bug to trace but a limit to explain: one line instead of a stack trace.
+        try {
+            return $this->option('check')
+                ? $this->check($generator, $config)
+                : $this->write($generator, $config);
+        } catch (UnsupportedDriverException $exception) {
+            $this->components->error($exception->getMessage());
 
+            return self::FAILURE;
+        }
+    }
+
+    private function write(SchemaFileGenerator $generator, SchemaFileConfig $config): int
+    {
         $this->components->info(match ($generator->generate($config)) {
             GenerationResult::Written => "Schema file written to [{$config->path}].",
             GenerationResult::Unchanged => "Schema file [{$config->path}] is already up to date.",

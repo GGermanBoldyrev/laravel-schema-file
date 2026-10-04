@@ -29,9 +29,9 @@ abstract readonly class AbstractColumnMapper implements ColumnMapper
 
     private const array FRACTIONALS = ['decimal', 'float', 'double'];
 
-    final public function map(array $column): Column
+    final public function map(array $column, TableContext $table): Column
     {
-        if ($this->isId($column)) {
+        if ($this->isId($column, $table)) {
             return new Column($column['name'], 'id');
         }
 
@@ -45,7 +45,21 @@ abstract readonly class AbstractColumnMapper implements ColumnMapper
             unsigned: $this->isUnsigned($column),
             default: $this->default($column, $method),
             comment: $column['comment'],
+            virtualAs: $this->generation($column, 'virtual'),
+            storedAs: $this->generation($column, 'stored'),
         );
+    }
+
+    /**
+     * The expression the column is computed from, if it is a generated column of the given kind.
+     *
+     * @param  RawColumn  $column
+     */
+    private function generation(array $column, string $type): ?string
+    {
+        $generation = $column['generation'];
+
+        return $generation !== null && $generation['type'] === $type ? $generation['expression'] : null;
     }
 
     /**
@@ -67,7 +81,7 @@ abstract readonly class AbstractColumnMapper implements ColumnMapper
      *
      * @param  RawColumn  $column
      */
-    abstract protected function isId(array $column): bool;
+    abstract protected function isId(array $column, TableContext $table): bool;
 
     /**
      * What is passed to the Blueprint method after the column name: a length, a precision, enum values.

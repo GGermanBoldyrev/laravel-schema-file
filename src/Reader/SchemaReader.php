@@ -6,6 +6,8 @@ namespace GGermanBoldyrev\SchemaFile\Reader;
 
 use GGermanBoldyrev\SchemaFile\Contracts\ColumnMapper;
 use GGermanBoldyrev\SchemaFile\Mapper\ColumnMapperRegistry;
+use GGermanBoldyrev\SchemaFile\Mapper\TableContext;
+use GGermanBoldyrev\SchemaFile\Schema\Column;
 use GGermanBoldyrev\SchemaFile\Schema\ForeignKey;
 use GGermanBoldyrev\SchemaFile\Schema\Index;
 use GGermanBoldyrev\SchemaFile\Schema\IndexType;
@@ -44,22 +46,27 @@ final readonly class SchemaReader
             $name = $this->withoutPrefix($table['name'], $prefix);
 
             if ($name !== null && ! Str::is($except, $name)) {
-                $tables[] = $this->table($name, $schema, $mapper, $prefix);
+                $tables[] = $this->table(new TableContext($connection, $name), $schema, $mapper);
             }
         }
 
         return $tables;
     }
 
-    private function table(string $name, Builder $schema, ColumnMapper $mapper, string $prefix): Table
+    private function table(TableContext $table, Builder $schema, ColumnMapper $mapper): Table
     {
+        $prefix = $table->connection->getTablePrefix();
+
         return new Table(
-            name: $name,
-            columns: array_map($mapper->map(...), array_values($schema->getColumns($name))),
-            indexes: array_map($this->index(...), array_values($schema->getIndexes($name))),
+            name: $table->name,
+            columns: array_map(
+                fn (array $column): Column => $mapper->map($column, $table),
+                array_values($schema->getColumns($table->name)),
+            ),
+            indexes: array_map($this->index(...), array_values($schema->getIndexes($table->name))),
             foreignKeys: array_map(
                 fn (array $foreignKey): ForeignKey => $this->foreignKey($foreignKey, $prefix),
-                array_values($schema->getForeignKeys($name)),
+                array_values($schema->getForeignKeys($table->name)),
             ),
         );
     }

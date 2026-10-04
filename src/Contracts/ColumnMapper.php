@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace GGermanBoldyrev\SchemaFile\Contracts;
 
+use GGermanBoldyrev\SchemaFile\Mapper\TableContext;
 use GGermanBoldyrev\SchemaFile\Schema\Column;
 
 /**
@@ -28,6 +29,7 @@ interface ColumnMapper
 {
     /**
      * @param  RawColumn  $column  One entry of Schema::getColumns().
+     * @param  TableContext  $table  The table the column belongs to.
      */
-    public function map(array $column): Column;
+    public function map(array $column, TableContext $table): Column;
 }
