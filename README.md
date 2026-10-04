@@ -95,10 +95,10 @@ To edit the config file itself, publish it to `config/schema-file.php`:
 php artisan vendor:publish --tag=schema-file-config
 ```
 
-The published file has one more setting, `except`: a list of tables to leave out of the schema file. The table Laravel tracks migrations in is always left out.
+The published file has one more setting, `except`: the tables to leave out of the schema file, by exact name or by a pattern where `*` matches anything. The table Laravel tracks migrations in is always left out.
 
 ```php
-'except' => ['telescope_entries', 'pulse_values'],
+'except' => ['failed_jobs', 'telescope_*', 'pulse_*'],
 ```
 
 ## License

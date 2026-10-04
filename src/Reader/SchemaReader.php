@@ -12,6 +12,7 @@ use GGermanBoldyrev\SchemaFile\Schema\IndexType;
 use GGermanBoldyrev\SchemaFile\Schema\Table;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Schema\Builder;
+use Illuminate\Support\Str;
 
 /**
  * Answers one question: what is in the database right now.
@@ -28,7 +29,7 @@ final readonly class SchemaReader
     }
 
     /**
-     * @param  list<string>  $except  Table names, without the connection's prefix, to leave out.
+     * @param  list<string>  $except  Tables to leave out: names without the connection's prefix, or patterns such as "telescope_*".
      * @return list<Table>
      */
     public function read(Connection $connection, array $except = []): array
@@ -42,7 +43,7 @@ final readonly class SchemaReader
         foreach ($schema->getTables($schema->getCurrentSchemaListing()) as $table) {
             $name = $this->withoutPrefix($table['name'], $prefix);
 
-            if ($name !== null && ! in_array($name, $except, true)) {
+            if ($name !== null && ! Str::is($except, $name)) {
                 $tables[] = $this->table($name, $schema, $mapper, $prefix);
             }
         }

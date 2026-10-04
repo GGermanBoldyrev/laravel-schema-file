@@ -17,7 +17,7 @@ final readonly class SchemaFileConfig
 {
     /**
      * @param  string|null  $connection  Null means the application's default connection.
-     * @param  list<string>  $except  Tables left out of the schema file.
+     * @param  list<string>  $except  Names or patterns ("telescope_*") of tables left out of the schema file.
      */
     public function __construct(
         public string $path,

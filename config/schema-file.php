@@ -32,8 +32,9 @@ return [
     | Excluded Tables
     |--------------------------------------------------------------------------
     |
-    | Tables that are left out of the schema file. The table Laravel uses
-    | to track migrations is always left out and need not be listed.
+    | Tables that are left out of the schema file, by exact name or by a
+    | pattern where * matches anything, such as "telescope_*". The table
+    | Laravel uses to track migrations is always left out.
     |
     */
 
