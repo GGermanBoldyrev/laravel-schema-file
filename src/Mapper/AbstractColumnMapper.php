@@ -25,9 +25,17 @@ abstract readonly class AbstractColumnMapper implements ColumnMapper
     private const array INTEGERS = [
         'integer', 'tinyInteger', 'smallInteger', 'mediumInteger', 'bigInteger',
         'unsignedInteger', 'unsignedTinyInteger', 'unsignedSmallInteger', 'unsignedMediumInteger', 'unsignedBigInteger',
+        'year',
     ];
 
     private const array FRACTIONALS = ['decimal', 'float', 'double'];
+
+    private const array TEMPORALS = ['timestamp', 'timestampTz', 'dateTime', 'dateTimeTz'];
+
+    /**
+     * Methods that create an auto-incrementing primary key on their own.
+     */
+    private const array INCREMENTS = ['increments', 'tinyIncrements', 'smallIncrements', 'mediumIncrements', 'bigIncrements'];
 
     final public function map(array $column, TableContext $table): Column
     {
@@ -36,30 +44,23 @@ abstract readonly class AbstractColumnMapper implements ColumnMapper
         }
 
         $method = $this->method($column) ?? self::RAW;
+        $default = $this->default($column, $method, $table);
+        $useCurrent = $this->isCurrentTimestamp($default, $method);
 
         return new Column(
             name: $column['name'],
             method: $method,
             arguments: $method === self::RAW ? [$column['type']] : $this->arguments($column, $method),
             nullable: $column['nullable'],
-            unsigned: $this->isUnsigned($column),
-            default: $this->default($column, $method),
-            comment: $column['comment'],
+            unsigned: $this->isUnsigned($column, $method),
+            autoIncrement: ! in_array($method, self::INCREMENTS, true) && $this->isIncrementing($column, $table),
+            default: $useCurrent ? null : $default,
+            comment: ($column['comment'] ?? '') === '' ? null : $column['comment'],
             virtualAs: $this->generation($column, 'virtual'),
             storedAs: $this->generation($column, 'stored'),
+            useCurrent: $useCurrent,
+            useCurrentOnUpdate: $this->usesCurrentOnUpdate($column, $table),
         );
-    }
-
-    /**
-     * The expression the column is computed from, if it is a generated column of the given kind.
-     *
-     * @param  RawColumn  $column
-     */
-    private function generation(array $column, string $type): ?string
-    {
-        $generation = $column['generation'];
-
-        return $generation !== null && $generation['type'] === $type ? $generation['expression'] : null;
     }
 
     /**
@@ -74,7 +75,7 @@ abstract readonly class AbstractColumnMapper implements ColumnMapper
      *
      * @param  RawColumn  $column
      */
-    abstract protected function default(array $column, string $method): string|int|float|bool|Expression|null;
+    abstract protected function default(array $column, string $method, TableContext $table): string|int|float|bool|Expression|null;
 
     /**
      * Whether the column is exactly what $table->id() creates.
@@ -95,9 +96,27 @@ abstract readonly class AbstractColumnMapper implements ColumnMapper
     }
 
     /**
+     * Whether ->unsigned() has to be chained, which is not the case when the method itself says so.
+     *
      * @param  RawColumn  $column
      */
-    protected function isUnsigned(array $column): bool
+    protected function isUnsigned(array $column, string $method): bool
+    {
+        return false;
+    }
+
+    /**
+     * @param  RawColumn  $column
+     */
+    protected function isIncrementing(array $column, TableContext $table): bool
+    {
+        return $column['auto_increment'];
+    }
+
+    /**
+     * @param  RawColumn  $column
+     */
+    protected function usesCurrentOnUpdate(array $column, TableContext $table): bool
     {
         return false;
     }
@@ -118,5 +137,102 @@ abstract readonly class AbstractColumnMapper implements ColumnMapper
             in_array($method, self::FRACTIONALS, true) => (float) $value,
             default => $value,
         };
+    }
+
+    /**
+     * Read a default that the database reports as the SQL it was declared with:
+     * 'draft', 42, NULL, or an expression such as CURRENT_TIMESTAMP.
+     */
+    final protected function sqlDefault(string $default, string $method): string|int|float|bool|Expression|null
+    {
+        if (strcasecmp($default, 'null') === 0) {
+            return null;
+        }
+
+        // One string literal and nothing else: 'a' || 'b' also starts and ends with a quote.
+        if (preg_match("/^'((?:[^']|'')*)'$/s", $default, $matches) === 1) {
+            return $this->literal(str_replace("''", "'", $matches[1]), $method);
+        }
+
+        if (is_numeric($default)) {
+            return $this->literal($default, $method);
+        }
+
+        return $this->expression($default);
+    }
+
+    /**
+     * Raw SQL in a form that is valid after the word DEFAULT: anything but a bare
+     * keyword has to be parenthesised.
+     */
+    final protected function expression(string $sql): Expression
+    {
+        if (preg_match('/^(\w+|current_timestamp\(\d*\))$/i', $sql) === 1 || $this->isParenthesised($sql)) {
+            return new Expression($sql);
+        }
+
+        return new Expression("({$sql})");
+    }
+
+    /**
+     * The values between the parentheses of a type: "decimal(8,2) unsigned" gives ["8", "2"].
+     *
+     * @return list<string>
+     */
+    final protected function parameters(string $type): array
+    {
+        if (preg_match('/\(([^)]*)\)/', $type, $matches) !== 1) {
+            return [];
+        }
+
+        return array_map('trim', explode(',', $matches[1]));
+    }
+
+    /**
+     * Whether one pair of parentheses wraps the whole expression, as in "(a + (b))" but not "(a) + (b)".
+     */
+    private function isParenthesised(string $sql): bool
+    {
+        if (! str_starts_with($sql, '(') || ! str_ends_with($sql, ')')) {
+            return false;
+        }
+
+        $depth = 0;
+
+        foreach (str_split(substr($sql, 0, -1)) as $character) {
+            $depth += match ($character) {
+                '(' => 1,
+                ')' => -1,
+                default => 0,
+            };
+
+            if ($depth === 0) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Whether the default is what ->useCurrent() writes.
+     */
+    private function isCurrentTimestamp(string|int|float|bool|Expression|null $default, string $method): bool
+    {
+        return $default instanceof Expression
+            && in_array($method, self::TEMPORALS, true)
+            && preg_match('/^current_timestamp(\(\d*\))?$/i', $default->sql) === 1;
+    }
+
+    /**
+     * The expression the column is computed from, if it is a generated column of the given kind.
+     *
+     * @param  RawColumn  $column
+     */
+    private function generation(array $column, string $type): ?string
+    {
+        $generation = $column['generation'];
+
+        return $generation !== null && $generation['type'] === $type ? $generation['expression'] : null;
     }
 }

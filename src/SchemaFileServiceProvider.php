@@ -8,6 +8,8 @@ use GGermanBoldyrev\SchemaFile\Console\ConsoleNotifier;
 use GGermanBoldyrev\SchemaFile\Console\SchemaFileCommand;
 use GGermanBoldyrev\SchemaFile\Listeners\GenerateSchemaFile;
 use GGermanBoldyrev\SchemaFile\Mapper\ColumnMapperRegistry;
+use GGermanBoldyrev\SchemaFile\Mapper\Drivers\MySqlColumnMapper;
+use GGermanBoldyrev\SchemaFile\Mapper\Drivers\PostgresColumnMapper;
 use GGermanBoldyrev\SchemaFile\Mapper\Drivers\SqliteColumnMapper;
 use Illuminate\Config\Repository;
 use Illuminate\Console\Events\CommandFinished;
@@ -47,6 +49,9 @@ final class SchemaFileServiceProvider extends ServiceProvider
             ColumnMapperRegistry::class,
             fn (): ColumnMapperRegistry => new ColumnMapperRegistry([
                 'sqlite' => new SqliteColumnMapper,
+                'mysql' => new MySqlColumnMapper,
+                'mariadb' => new MySqlColumnMapper,
+                'pgsql' => new PostgresColumnMapper,
             ]),
         );
     }

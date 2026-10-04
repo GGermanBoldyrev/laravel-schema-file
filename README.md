@@ -108,6 +108,46 @@ The published file has one more setting, `except`: the tables to leave out of th
 'except' => ['failed_jobs', 'telescope_*', 'pulse_*'],
 ```
 
+## What the file shows
+
+The file describes the database as it is, not the migrations as they were written. Where a database stores less than a migration said, the file shows what is really there:
+
+| In the migration | MySQL | MariaDB | PostgreSQL | SQLite |
+| --- | --- | --- | --- | --- |
+| `string('name', 50)` | `string('name', 50)` | `string('name', 50)` | `string('name', 50)` | `string('name')` |
+| `json('data')` | `json` | `longText` | `json` | `text` |
+| `uuid('id')` | `uuid` | `uuid` | `uuid` | `string` |
+| `enum('status', [...])` | `enum` | `enum` | `string` | `string` |
+| `unsignedBigInteger('n')` | `unsignedBigInteger` | `unsignedBigInteger` | `bigInteger` | `integer` |
+| `dateTime('at')` | `dateTime` | `dateTime` | `timestamp` | `timestamp` |
+| `tinyInteger('n')` | `tinyInteger` | `tinyInteger` | `smallInteger` | `integer` |
+
+So the file is the same for everyone only when everyone runs the same database. A type that no Blueprint method creates is written with `rawColumn()`.
+
+Not shown at all: views, triggers, check constraints, and indexes over an expression rather than columns (which is what a full-text index is on PostgreSQL).
+
+## Testing
+
+```bash
+composer test
+```
+
+Runs everything that needs no database server: the unit tests, and the feature tests on SQLite.
+
+```bash
+composer test:all
+```
+
+Starts MySQL, MariaDB and PostgreSQL in Docker, runs the whole suite against all four databases, and removes the containers again, whether the tests passed or not. Nothing is left running and no data is kept.
+
+To run against servers of your own, name them and say where they are:
+
+```bash
+TEST_DATABASES=mysql,pgsql TEST_MYSQL_PORT=3306 TEST_PGSQL_PORT=5432 vendor/bin/pest
+```
+
+Each server takes `TEST_{DRIVER}_HOST`, `_PORT`, `_DATABASE`, `_USERNAME` and `_PASSWORD`. The tests drop every table in the database they are given.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

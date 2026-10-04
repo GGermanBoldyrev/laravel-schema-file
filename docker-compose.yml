@@ -1,0 +1,43 @@
+# The database servers behind `composer test:all`, which starts them, runs the
+# tests and removes them again. Nothing is kept: the data lives in memory.
+#
+# The ports are unusual on purpose, so they do not collide with databases you
+# already run. They and the credentials match tests/Support/Servers.php.
+name: laravel-schema-file-tests
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: schema_file
+    ports: ['${TEST_MYSQL_PORT:-33061}:3306']
+    tmpfs: ['/var/lib/mysql']
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', '127.0.0.1', '-psecret']
+      interval: 2s
+      retries: 60
+
+  mariadb:
+    image: mariadb:11.4
+    environment:
+      MARIADB_ROOT_PASSWORD: secret
+      MARIADB_DATABASE: schema_file
+    ports: ['${TEST_MARIADB_PORT:-33062}:3306']
+    tmpfs: ['/var/lib/mysql']
+    healthcheck:
+      test: ['CMD', 'healthcheck.sh', '--connect', '--innodb_initialized']
+      interval: 2s
+      retries: 60
+
+  pgsql:
+    image: postgres:17
+    environment:
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: schema_file
+    ports: ['${TEST_PGSQL_PORT:-54321}:5432']
+    tmpfs: ['/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-U', 'postgres']
+      interval: 2s
+      retries: 60

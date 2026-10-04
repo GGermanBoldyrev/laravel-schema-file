@@ -51,9 +51,12 @@ final readonly class SqliteColumnMapper extends AbstractColumnMapper
      */
     protected function isId(array $column, TableContext $table): bool
     {
-        return $column['type_name'] === 'integer'
-            && $column['auto_increment']
-            && $this->declaresAutoIncrement($table);
+        return $column['type_name'] === 'integer' && $this->isIncrementing($column, $table);
+    }
+
+    protected function isIncrementing(array $column, TableContext $table): bool
+    {
+        return $column['auto_increment'] && $this->declaresAutoIncrement($table);
     }
 
     /**
@@ -83,24 +86,8 @@ final readonly class SqliteColumnMapper extends AbstractColumnMapper
     /**
      * SQLite reports a default as the SQL it was declared with: 'draft', '0', CURRENT_TIMESTAMP.
      */
-    protected function default(array $column, string $method): string|int|float|bool|Expression|null
+    protected function default(array $column, string $method, TableContext $table): string|int|float|bool|Expression|null
     {
-        $default = $column['default'];
-
-        if ($default === null || strcasecmp($default, 'null') === 0) {
-            return null;
-        }
-
-        // One string literal and nothing else: 'a' || 'b' also starts and ends with a quote.
-        if (preg_match("/^'((?:[^']|'')*)'$/s", $default, $matches) === 1) {
-            return $this->literal(str_replace("''", "'", $matches[1]), $method);
-        }
-
-        if (is_numeric($default)) {
-            return $this->literal($default, $method);
-        }
-
-        // Anything but a bare keyword must be parenthesised to be a valid default again.
-        return new Expression(preg_match('/^\w+$/', $default) === 1 ? $default : "({$default})");
+        return $column['default'] === null ? null : $this->sqlDefault($column['default'], $method);
     }
 }

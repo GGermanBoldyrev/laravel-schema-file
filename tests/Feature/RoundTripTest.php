@@ -115,8 +115,8 @@ it('recreates an identical schema from the file it generated', function () {
         ->and(DB::connection('secondary')->scalar("select sql from sqlite_master where name = 'plain_keys'"))->not->toContain('autoincrement')
         ->and(DB::connection('secondary')->scalar("select sql from sqlite_master where name = 'teams'"))->toContain('autoincrement')
         ->and($first)
-        ->toContain("\$table->integer('doubled')->virtualAs('count * 2');")
-        ->toContain("\$table->integer('tripled')->storedAs('count * 3');");
+        ->toContain("\$table->integer('doubled')->virtualAs('count * 2')->nullable();")
+        ->toContain("\$table->integer('tripled')->storedAs('count * 3')->nullable();");
 });
 
 it('recreates an identical schema for an empty database', function () {

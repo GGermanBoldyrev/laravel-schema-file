@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+#
+# Run the whole test suite, including the tests that need a MySQL, MariaDB and
+# PostgreSQL server: start the servers, run the tests, and remove the servers
+# again whatever happened in between. Arguments are passed on to Pest.
+
+set -eu
+
+cd "$(dirname "$0")/.."
+
+cleanup() {
+    docker compose down --volumes --remove-orphans >/dev/null 2>&1 || true
+}
+
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+
+docker compose up --detach --wait --quiet-pull
+
+TEST_DATABASES=all vendor/bin/pest "$@"

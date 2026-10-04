@@ -11,6 +11,8 @@ final readonly class Column
      * @param  list<mixed>  $arguments  Arguments passed to that method after the column name.
      * @param  string|null  $virtualAs  The expression of a column computed on every read.
      * @param  string|null  $storedAs  The expression of a column computed on write and stored.
+     * @param  bool  $useCurrent  Whether the column defaults to the current time.
+     * @param  bool  $useCurrentOnUpdate  Whether the column is set to the current time whenever its row changes.
      */
     public function __construct(
         public string $name,
@@ -23,6 +25,8 @@ final readonly class Column
         public ?string $comment = null,
         public ?string $virtualAs = null,
         public ?string $storedAs = null,
+        public bool $useCurrent = false,
+        public bool $useCurrentOnUpdate = false,
     ) {
     }
 

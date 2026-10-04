@@ -344,10 +344,10 @@ it('reads each connection separately', function () {
 });
 
 it('refuses a database driver it has no mapper for, before running any query', function () {
-    config(['database.connections.postgres' => ['driver' => 'pgsql', 'host' => '127.0.0.1', 'database' => 'nowhere']]);
+    config(['database.connections.unsupported' => ['driver' => 'sqlsrv', 'host' => '127.0.0.1', 'database' => 'nowhere']]);
 
-    expect(fn () => readSchema(connection: 'postgres'))->toThrow(
+    expect(fn () => readSchema(connection: 'unsupported'))->toThrow(
         UnsupportedDriverException::class,
-        'The schema file cannot be generated for the [pgsql] database driver. Supported drivers: sqlite.',
+        'The schema file cannot be generated for the [sqlsrv] database driver. Supported drivers: sqlite, mysql, mariadb, pgsql.',
     );
 });

@@ -25,6 +25,14 @@ use Illuminate\Support\Str;
  */
 final readonly class SchemaReader
 {
+    /**
+     * Driver => what it reports for a foreign key declared without an action, where
+     * that is not "no action". MariaDB says "restrict", which there means the same.
+     */
+    private const array NO_ACTION = [
+        'mariadb' => 'restrict',
+    ];
+
     public function __construct(
         private ColumnMapperRegistry $mappers,
     ) {
@@ -56,6 +64,14 @@ final readonly class SchemaReader
     private function table(TableContext $table, Builder $schema, ColumnMapper $mapper): Table
     {
         $prefix = $table->connection->getTablePrefix();
+        $noAction = self::NO_ACTION[$table->connection->getDriverName()] ?? 'no action';
+
+        $foreignKeys = array_map(
+            fn (array $foreignKey): ForeignKey => $this->foreignKey($foreignKey, $prefix, $noAction),
+            array_values($schema->getForeignKeys($table->name)),
+        );
+
+        $indexes = array_map($this->index(...), array_values($schema->getIndexes($table->name)));
 
         return new Table(
             name: $table->name,
@@ -63,12 +79,35 @@ final readonly class SchemaReader
                 fn (array $column): Column => $mapper->map($column, $table),
                 array_values($schema->getColumns($table->name)),
             ),
-            indexes: array_map($this->index(...), array_values($schema->getIndexes($table->name))),
-            foreignKeys: array_map(
-                fn (array $foreignKey): ForeignKey => $this->foreignKey($foreignKey, $prefix),
-                array_values($schema->getForeignKeys($table->name)),
-            ),
+            indexes: array_values(array_filter(
+                $indexes,
+                fn (Index $index): bool => $index->columns !== [] && ! $this->backsForeignKey($index, $foreignKeys),
+            )),
+            foreignKeys: $foreignKeys,
         );
+    }
+
+    /**
+     * Whether the index is the one MySQL creates by itself for a foreign key, under the key's name.
+     * It comes back with the key, so writing it down as well would only be noise.
+     *
+     * An index over an expression rather than columns, which has no columns to name, is left out too.
+     *
+     * @param  list<ForeignKey>  $foreignKeys
+     */
+    private function backsForeignKey(Index $index, array $foreignKeys): bool
+    {
+        if ($index->type !== IndexType::Index) {
+            return false;
+        }
+
+        foreach ($foreignKeys as $foreignKey) {
+            if ($foreignKey->name !== null && $foreignKey->name === $index->name && $foreignKey->columns === $index->columns) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -90,26 +129,26 @@ final readonly class SchemaReader
     /**
      * @param  array{name: string|null, columns: list<string>, foreign_table: string, foreign_columns: list<string>, on_update: string|null, on_delete: string|null}  $foreignKey
      */
-    private function foreignKey(array $foreignKey, string $prefix): ForeignKey
+    private function foreignKey(array $foreignKey, string $prefix, string $noAction): ForeignKey
     {
         return new ForeignKey(
             columns: $foreignKey['columns'],
             foreignTable: $this->withoutPrefix($foreignKey['foreign_table'], $prefix) ?? $foreignKey['foreign_table'],
             foreignColumns: $foreignKey['foreign_columns'],
             name: $foreignKey['name'],
-            onUpdate: $this->referentialAction($foreignKey['on_update']),
-            onDelete: $this->referentialAction($foreignKey['on_delete']),
+            onUpdate: $this->referentialAction($foreignKey['on_update'], $noAction),
+            onDelete: $this->referentialAction($foreignKey['on_delete'], $noAction),
         );
     }
 
     /**
-     * "No action" is what a database does when nothing was asked for, so it is not an action to write down.
+     * What a database reports when no action was asked for is not an action to write down.
      */
-    private function referentialAction(?string $action): ?string
+    private function referentialAction(?string $action, string $noAction): ?string
     {
         $action = strtolower($action ?? '');
 
-        return in_array($action, ['', 'no action'], true) ? null : $action;
+        return in_array($action, ['', 'no action', $noAction], true) ? null : $action;
     }
 
     /**

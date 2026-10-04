@@ -5,6 +5,8 @@ declare(strict_types=1);
 use GGermanBoldyrev\SchemaFile\Console\ConsoleNotifier;
 use GGermanBoldyrev\SchemaFile\Contracts\ColumnMapper;
 use GGermanBoldyrev\SchemaFile\Mapper\ColumnMapperRegistry;
+use GGermanBoldyrev\SchemaFile\Mapper\Drivers\MySqlColumnMapper;
+use GGermanBoldyrev\SchemaFile\Mapper\Drivers\PostgresColumnMapper;
 use GGermanBoldyrev\SchemaFile\Mapper\Drivers\SqliteColumnMapper;
 use GGermanBoldyrev\SchemaFile\Mapper\TableContext;
 use GGermanBoldyrev\SchemaFile\Schema\Column;
@@ -48,12 +50,15 @@ it('shares one console notifier', function () {
     expect(app(ConsoleNotifier::class))->toBe(app(ConsoleNotifier::class));
 });
 
-it('shares one registry that knows SQLite', function () {
+it('shares one registry that knows every supported driver', function () {
     $registry = app(ColumnMapperRegistry::class);
 
     expect($registry)->toBe(app(ColumnMapperRegistry::class))
-        ->and($registry->drivers())->toBe(['sqlite'])
-        ->and($registry->for('sqlite'))->toBeInstanceOf(SqliteColumnMapper::class);
+        ->and($registry->drivers())->toBe(['sqlite', 'mysql', 'mariadb', 'pgsql'])
+        ->and($registry->for('sqlite'))->toBeInstanceOf(SqliteColumnMapper::class)
+        ->and($registry->for('mysql'))->toBeInstanceOf(MySqlColumnMapper::class)
+        ->and($registry->for('mariadb'))->toBeInstanceOf(MySqlColumnMapper::class)
+        ->and($registry->for('pgsql'))->toBeInstanceOf(PostgresColumnMapper::class);
 });
 
 it('lets an application replace the mapper of a driver', function () {

@@ -351,15 +351,15 @@ describe('foreign keys', function () {
 });
 
 describe('generated columns', function () {
-    it('renders the expression and leaves out the nullability a generated column has by default', function () {
+    it('renders the expression and always says whether a generated column is nullable', function () {
         $output = renderEdge(new Table('t', [
             new Column('doubled', 'integer', nullable: true, virtualAs: 'price * 2'),
             new Column('tripled', 'integer', nullable: true, storedAs: 'price * 3'),
         ]));
 
         expect(blockLines($output, "Schema::create('t'"))->toBe([
-            "\$table->integer('doubled')->virtualAs('price * 2');",
-            "\$table->integer('tripled')->storedAs('price * 3');",
+            "\$table->integer('doubled')->virtualAs('price * 2')->nullable();",
+            "\$table->integer('tripled')->storedAs('price * 3')->nullable();",
         ]);
     });
 
@@ -377,7 +377,7 @@ describe('generated columns', function () {
         ], [new Index(IndexType::Index, ['label'])]));
 
         expect(blockLines($output, "Schema::create('t'"))->toBe([
-            "\$table->string('label', 50)->storedAs('name || \\' (it\\'\\'s)\\'')->comment('Shown in lists')->index();",
+            "\$table->string('label', 50)->storedAs('name || \\' (it\\'\\'s)\\'')->nullable()->comment('Shown in lists')->index();",
         ]);
     });
 

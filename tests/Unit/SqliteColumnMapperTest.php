@@ -128,8 +128,23 @@ it('reads defaults as SQLite reports them', function (string $type, string $defa
     'boolean true' => ['tinyint(1)', "'1'", true],
     'decimal' => ['numeric', "'1.5'", 1.5],
     'float' => ['float', "'0.25'", 0.25],
-    'keyword' => ['datetime', 'CURRENT_TIMESTAMP', new Expression('CURRENT_TIMESTAMP')],
+    'keyword' => ['integer', 'CURRENT_TIMESTAMP', new Expression('CURRENT_TIMESTAMP')],
     'expression' => ['integer', '1 + 1', new Expression('(1 + 1)')],
+]);
+
+it('reads the current time as a default of a timestamp as useCurrent', function () {
+    $column = mapSqlite('datetime', ['default' => 'CURRENT_TIMESTAMP']);
+
+    expect($column)->useCurrent->toBeTrue()->default->toBeNull()->useCurrentOnUpdate->toBeFalse();
+});
+
+it('does not mark a column without that default as useCurrent', function (string $type, ?string $default) {
+    expect(mapSqlite($type, ['default' => $default])->useCurrent)->toBeFalse();
+})->with([
+    'no default' => ['datetime', null],
+    'a fixed moment' => ['datetime', "'2024-01-01 00:00:00'"],
+    'the words as a string' => ['datetime', "'CURRENT_TIMESTAMP'"],
+    'not a timestamp' => ['varchar', 'CURRENT_TIMESTAMP'],
 ]);
 
 it('treats a missing or NULL default as no default', function (?string $default) {

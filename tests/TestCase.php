@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace GGermanBoldyrev\SchemaFile\Tests;
 
 use GGermanBoldyrev\SchemaFile\SchemaFileServiceProvider;
+use GGermanBoldyrev\SchemaFile\Tests\Support\Servers;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Filesystem\Filesystem;
 use Orchestra\Testbench\TestCase as Orchestra;
@@ -51,6 +52,10 @@ abstract class TestCase extends Orchestra
         $app['config']->set('database.connections.secondary', $memory);
         $app['config']->set('database.connections.prefixed', [...$memory, 'prefix' => 'app_']);
         $app['config']->set('schema-file.path', $this->schemaPath());
+
+        foreach (Servers::connections() as $name => $connection) {
+            $app['config']->set("database.connections.{$name}", $connection);
+        }
     }
 
     public function schemaPath(): string
