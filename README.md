@@ -4,7 +4,8 @@
 
 # Laravel Schema File
 
-One always up-to-date file with your whole database schema, regenerated after every migration. Inspired by Rails' `schema.rb`.
+One always up-to-date file with your whole database schema, regenerated after every migration.
+Inspired by Rails' `schema.rb`.
 
 ## Why
 
@@ -21,12 +22,84 @@ Laravel Schema File brings the Rails approach to Laravel:
 ## Requirements
 
 | | Version |
-|---|---|
-| PHP | 8.2+ |
-| Laravel | 12.x, 13.x |
+| --- | --- |
+| PHP | 8.3+ |
+| Laravel | 13.x |
 | Database | MySQL, MariaDB, PostgreSQL, SQLite |
 
-The package relies on Laravel's native schema introspection (`Schema::getTables()`, `getColumns()`, `getIndexes()`, `getForeignKeys()`), so it needs no `doctrine/dbal`. Only Laravel versions that still receive fixes are supported.
+The package relies on Laravel's native schema introspection (
+  `Schema::getTables()`,
+  `getColumns()`,
+  `getIndexes()`,
+  `getForeignKeys()`,
+), so it needs no `doctrine/dbal`. Only Laravel versions that still receive fixes are supported.
+
+## Installation
+
+```bash
+composer require --dev ggermanboldyrev/laravel-schema-file
+```
+
+That is all: Laravel discovers the package's service provider automatically.
+
+If you have disabled package discovery, register the provider yourself in `bootstrap/providers.php`:
+
+```php
+return [
+    App\Providers\AppServiceProvider::class,
+    GGermanBoldyrev\SchemaFile\SchemaFileServiceProvider::class,
+];
+```
+
+## Usage
+
+```bash
+php artisan schema:generate
+```
+
+Writes the schema file. The file is left untouched when it already matches the database. The command is also available as `migrate:schema`.
+
+| Option | What it does |
+| --- | --- |
+| `--check` | Writes nothing. Exits with code `1` if the schema file is missing or out of date, `0` otherwise. |
+| `--path=` | Where to write the schema file, for this run only. |
+| `--database=` | The database connection to read the schema from, for this run only. |
+
+Use `--check` in CI to catch a migration that was committed without the updated schema file:
+
+```bash
+php artisan migrate
+php artisan schema:generate --check
+```
+
+For an application with more than one database, generate a file per connection:
+
+```bash
+php artisan schema:generate --database=analytics --path=database/analytics-schema.php
+```
+
+## Configuration
+
+The defaults work without any setup. Each setting can be changed in `.env`:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `SCHEMA_FILE_PATH` | `database/schema.php` | Where the schema file is written. |
+| `SCHEMA_FILE_CONNECTION` | the default connection | The connection whose schema is written. |
+
+The `--path` and `--database` options take precedence over these for a single run.
+
+To edit the config file itself, publish it to `config/schema-file.php`:
+
+```bash
+php artisan vendor:publish --tag=schema-file-config
+```
+
+The published file has one more setting, `except`: a list of tables to leave out of the schema file. The table Laravel tracks migrations in is always left out.
+
+```php
+'except' => ['telescope_entries', 'pulse_values'],
+```
 
 ## License
 
