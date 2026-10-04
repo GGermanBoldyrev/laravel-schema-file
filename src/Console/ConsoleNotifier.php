@@ -13,12 +13,16 @@ use Illuminate\Contracts\Container\Container;
  * Lets code that runs inside someone else's command, such as the migration listener
  * inside "migrate", print to that command's output in its style.
  *
- * It remembers the output of the command that is currently running. Outside of a
- * command there is nowhere to print, and the messages are dropped.
+ * It keeps the output of every command that is running right now, innermost last,
+ * and forgets each one when its command finishes. Outside of a command there is
+ * nowhere to print, and the messages are dropped.
  */
 final class ConsoleNotifier
 {
-    private ?OutputStyle $output = null;
+    /**
+     * @var list<OutputStyle>
+     */
+    private array $outputs = [];
 
     public function __construct(
         private readonly Container $container,
@@ -29,10 +33,15 @@ final class ConsoleNotifier
     {
         // Built through the container, exactly as commands build theirs, so that an
         // application's own output style applies to these messages too.
-        $this->output = $this->container->make(OutputStyle::class, [
+        $this->outputs[] = $this->container->make(OutputStyle::class, [
             'input' => $event->input,
             'output' => $event->output,
         ]);
+    }
+
+    public function release(): void
+    {
+        array_pop($this->outputs);
     }
 
     public function info(string $message): void
@@ -47,6 +56,8 @@ final class ConsoleNotifier
 
     private function components(): ?Factory
     {
-        return $this->output === null ? null : new Factory($this->output);
+        $output = $this->outputs[array_key_last($this->outputs) ?? 0] ?? null;
+
+        return $output === null ? null : new Factory($output);
     }
 }

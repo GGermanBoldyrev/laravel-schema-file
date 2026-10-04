@@ -10,6 +10,7 @@ use GGermanBoldyrev\SchemaFile\Listeners\GenerateSchemaFile;
 use GGermanBoldyrev\SchemaFile\Mapper\ColumnMapperRegistry;
 use GGermanBoldyrev\SchemaFile\Mapper\Drivers\SqliteColumnMapper;
 use Illuminate\Config\Repository;
+use Illuminate\Console\Events\CommandFinished;
 use Illuminate\Console\Events\CommandStarting;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
@@ -38,7 +39,7 @@ final class SchemaFileServiceProvider extends ServiceProvider
             ),
         );
 
-        // One instance, so that the output remembered when a command starts is there when migrations end.
+        // One instance, so that the output kept when a command starts is there when migrations end.
         $this->app->singleton(ConsoleNotifier::class);
 
         // Extend this binding to support another database driver or replace a mapper.
@@ -78,6 +79,7 @@ final class SchemaFileServiceProvider extends ServiceProvider
         $events = $this->app->make(Dispatcher::class);
 
         $events->listen(CommandStarting::class, [ConsoleNotifier::class, 'capture']);
+        $events->listen(CommandFinished::class, [ConsoleNotifier::class, 'release']);
         $events->listen(MigrationsEnded::class, GenerateSchemaFile::class);
     }
 
