@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace GGermanBoldyrev\SchemaFile\Console;
 
-use GGermanBoldyrev\SchemaFile\Exceptions\UnsupportedDriverException;
-use GGermanBoldyrev\SchemaFile\GenerationResult;
+use GGermanBoldyrev\SchemaFile\Console\Operations\ConflictingOperationsException;
+use GGermanBoldyrev\SchemaFile\Console\Operations\OperationRegistry;
+use GGermanBoldyrev\SchemaFile\Console\Operations\OperationResult;
+use GGermanBoldyrev\SchemaFile\Reader\Columns\UnsupportedDriverException;
 use GGermanBoldyrev\SchemaFile\SchemaFileConfig;
-use GGermanBoldyrev\SchemaFile\SchemaFileGenerator;
 use Illuminate\Console\Attributes\Aliases;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Help;
@@ -17,6 +18,9 @@ use Illuminate\Console\Command;
 
 /**
  * The manual entry point: writes the schema file from the current state of the database.
+ *
+ * What it does for a given command line is an operation's business; the command only
+ * turns its options into settings and prints how the operation ended.
  */
 #[Signature('schema:generate
     {--database= : The database connection to read the schema from}
@@ -29,46 +33,25 @@ use Illuminate\Console\Command;
 #[Usage('schema:generate --database=analytics --path=database/analytics-schema.php')]
 final class SchemaFileCommand extends Command
 {
-    public function handle(SchemaFileGenerator $generator, SchemaFileConfig $config): int
+    public function handle(OperationRegistry $operations, SchemaFileConfig $config): int
     {
         $config = $config->with(
             path: $this->stringOption('path'),
             connection: $this->stringOption('database'),
         );
 
-        // Not a bug to trace but a limit to explain: one line instead of a stack trace.
+        // Not bugs to trace but things to tell the user: one line instead of a stack trace.
         try {
-            return $this->option('check')
-                ? $this->check($generator, $config)
-                : $this->write($generator, $config);
-        } catch (UnsupportedDriverException $exception) {
-            $this->components->error($exception->getMessage());
-
-            return self::FAILURE;
-        }
-    }
-
-    private function write(SchemaFileGenerator $generator, SchemaFileConfig $config): int
-    {
-        $this->components->info(match ($generator->generate($config)) {
-            GenerationResult::Written => "Schema file written to [{$config->path}].",
-            GenerationResult::Unchanged => "Schema file [{$config->path}] is already up to date.",
-        });
-
-        return self::SUCCESS;
-    }
-
-    private function check(SchemaFileGenerator $generator, SchemaFileConfig $config): int
-    {
-        if ($generator->isUpToDate($config)) {
-            $this->components->info("Schema file [{$config->path}] is up to date.");
-
-            return self::SUCCESS;
+            $result = $operations->for($this->options())->run($config);
+        } catch (ConflictingOperationsException|UnsupportedDriverException $exception) {
+            $result = OperationResult::failure($exception->getMessage());
         }
 
-        $this->components->error("Schema file [{$config->path}] is out of date. Run [php artisan schema:generate] to update it.");
+        $result->successful
+            ? $this->components->info($result->message)
+            : $this->components->error($result->message);
 
-        return self::FAILURE;
+        return $result->successful ? self::SUCCESS : self::FAILURE;
     }
 
     /**

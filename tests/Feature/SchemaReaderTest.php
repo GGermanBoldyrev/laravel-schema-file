@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use GGermanBoldyrev\SchemaFile\Exceptions\UnsupportedDriverException;
+use GGermanBoldyrev\SchemaFile\Reader\Columns\UnsupportedDriverException;
 use GGermanBoldyrev\SchemaFile\Reader\SchemaReader;
 use GGermanBoldyrev\SchemaFile\Schema\Column;
 use GGermanBoldyrev\SchemaFile\Schema\ForeignKey;

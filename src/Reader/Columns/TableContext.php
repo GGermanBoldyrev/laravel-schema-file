@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace GGermanBoldyrev\SchemaFile\Mapper;
+namespace GGermanBoldyrev\SchemaFile\Reader\Columns;
 
 use Illuminate\Database\Connection;
 

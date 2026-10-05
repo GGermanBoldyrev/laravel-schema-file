@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace GGermanBoldyrev\SchemaFile\Reader;
 
-use GGermanBoldyrev\SchemaFile\Contracts\ColumnMapper;
-use GGermanBoldyrev\SchemaFile\Mapper\ColumnMapperRegistry;
-use GGermanBoldyrev\SchemaFile\Mapper\TableContext;
+use GGermanBoldyrev\SchemaFile\Reader\Columns\ColumnMapper;
+use GGermanBoldyrev\SchemaFile\Reader\Columns\ColumnMapperRegistry;
+use GGermanBoldyrev\SchemaFile\Reader\Columns\TableContext;
 use GGermanBoldyrev\SchemaFile\Schema\Column;
 use GGermanBoldyrev\SchemaFile\Schema\ForeignKey;
 use GGermanBoldyrev\SchemaFile\Schema\Index;

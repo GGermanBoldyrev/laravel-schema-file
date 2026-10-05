@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-namespace GGermanBoldyrev\SchemaFile\Contracts;
+namespace GGermanBoldyrev\SchemaFile\Reader\Columns;
 
-use GGermanBoldyrev\SchemaFile\Mapper\TableContext;
 use GGermanBoldyrev\SchemaFile\Schema\Column;
 
 /**

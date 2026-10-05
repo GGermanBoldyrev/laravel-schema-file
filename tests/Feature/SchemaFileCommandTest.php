@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+use GGermanBoldyrev\SchemaFile\Console\Operations\Modes\CheckSchemaFile;
+use GGermanBoldyrev\SchemaFile\Console\Operations\Modes\WriteSchemaFile;
+use GGermanBoldyrev\SchemaFile\Console\Operations\OperationRegistry;
+use GGermanBoldyrev\SchemaFile\Reader\Columns\ColumnMapperRegistry;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schema;
@@ -119,6 +123,12 @@ describe('--check', function () {
         expect($this->schemaPath())->not->toBeFile();
     });
 
+    it('checks rather than writes when the flag is given a truthy value', function () {
+        $this->artisan('schema:generate', ['--check' => 1])->assertExitCode(1);
+
+        expect($this->schemaPath())->not->toBeFile();
+    });
+
     it('passes when the file is up to date', function () {
         $this->artisan('schema:generate');
 
@@ -167,8 +177,8 @@ describe('--check', function () {
 describe('unsupported database driver', function () {
     beforeEach(function () {
         app()->extend(
-            GGermanBoldyrev\SchemaFile\Mapper\ColumnMapperRegistry::class,
-            fn () => new GGermanBoldyrev\SchemaFile\Mapper\ColumnMapperRegistry,
+            ColumnMapperRegistry::class,
+            fn () => new ColumnMapperRegistry,
         );
     });
 
@@ -185,6 +195,30 @@ describe('unsupported database driver', function () {
             ->expectsOutputToContain('The schema file cannot be generated for the [sqlite] database driver.')
             ->doesntExpectOutputToContain('out of date')
             ->assertExitCode(1);
+    });
+});
+
+describe('conflicting operations', function () {
+    beforeEach(function () {
+        // Two operations that both answer to --check stand in for two modes given at once.
+        app()->bind(OperationRegistry::class, fn ($app) => new OperationRegistry(
+            fallback: $app->make(WriteSchemaFile::class),
+            operations: [$app->make(CheckSchemaFile::class), $app->make(CheckSchemaFile::class)],
+        ));
+    });
+
+    it('prints an error and fails without writing anything', function () {
+        $this->artisan('schema:generate', ['--check' => true])
+            ->expectsOutputToContain('The command line asks for more than one operation at once: CheckSchemaFile, CheckSchemaFile. Ask for one of them at a time.')
+            ->assertExitCode(1);
+
+        expect($this->schemaPath())->not->toBeFile();
+    });
+
+    it('still writes the file when the command line asks for neither', function () {
+        $this->artisan('schema:generate')->assertExitCode(0);
+
+        expect($this->schemaPath())->toBeFile();
     });
 });
 

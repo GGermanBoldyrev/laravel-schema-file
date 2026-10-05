@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use GGermanBoldyrev\SchemaFile\Reader\Columns\ColumnMapperRegistry;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -218,8 +219,8 @@ describe('failure', function () {
     it('warns about a database driver that is not supported', function () {
         config(['schema-file.path' => $this->schemaPath()]);
         app()->extend(
-            GGermanBoldyrev\SchemaFile\Mapper\ColumnMapperRegistry::class,
-            fn () => new GGermanBoldyrev\SchemaFile\Mapper\ColumnMapperRegistry,
+            ColumnMapperRegistry::class,
+            fn () => new ColumnMapperRegistry,
         );
 
         $this->artisan('migrate', fixtureMigrations())

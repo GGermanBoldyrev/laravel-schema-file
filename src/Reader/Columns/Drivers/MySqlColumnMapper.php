@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace GGermanBoldyrev\SchemaFile\Mapper\Drivers;
+namespace GGermanBoldyrev\SchemaFile\Reader\Columns\Drivers;
 
-use GGermanBoldyrev\SchemaFile\Contracts\ColumnMapper;
-use GGermanBoldyrev\SchemaFile\Mapper\AbstractColumnMapper;
-use GGermanBoldyrev\SchemaFile\Mapper\TableContext;
+use GGermanBoldyrev\SchemaFile\Reader\Columns\AbstractColumnMapper;
+use GGermanBoldyrev\SchemaFile\Reader\Columns\ColumnMapper;
+use GGermanBoldyrev\SchemaFile\Reader\Columns\TableContext;
 use GGermanBoldyrev\SchemaFile\Schema\Expression;
 use Illuminate\Database\MySqlConnection;
 

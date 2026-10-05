@@ -2,10 +2,7 @@
 
 declare(strict_types=1);
 
-namespace GGermanBoldyrev\SchemaFile\Mapper;
-
-use GGermanBoldyrev\SchemaFile\Contracts\ColumnMapper;
-use GGermanBoldyrev\SchemaFile\Exceptions\UnsupportedDriverException;
+namespace GGermanBoldyrev\SchemaFile\Reader\Columns;
 
 /**
  * The column mapper to use for each database driver.

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use GGermanBoldyrev\SchemaFile\Exceptions\UnsupportedDriverException;
-use GGermanBoldyrev\SchemaFile\Mapper\ColumnMapperRegistry;
-use GGermanBoldyrev\SchemaFile\Mapper\Drivers\SqliteColumnMapper;
+use GGermanBoldyrev\SchemaFile\Reader\Columns\ColumnMapperRegistry;
+use GGermanBoldyrev\SchemaFile\Reader\Columns\Drivers\SqliteColumnMapper;
+use GGermanBoldyrev\SchemaFile\Reader\Columns\UnsupportedDriverException;
 
 it('returns the mapper registered for a driver', function () {
     $mapper = new SqliteColumnMapper;

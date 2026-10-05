@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace GGermanBoldyrev\SchemaFile;
 
 use GGermanBoldyrev\SchemaFile\Console\ConsoleNotifier;
+use GGermanBoldyrev\SchemaFile\Console\Operations\Modes\CheckSchemaFile;
+use GGermanBoldyrev\SchemaFile\Console\Operations\Modes\WriteSchemaFile;
+use GGermanBoldyrev\SchemaFile\Console\Operations\OperationRegistry;
 use GGermanBoldyrev\SchemaFile\Console\SchemaFileCommand;
 use GGermanBoldyrev\SchemaFile\Listeners\GenerateSchemaFile;
-use GGermanBoldyrev\SchemaFile\Mapper\ColumnMapperRegistry;
-use GGermanBoldyrev\SchemaFile\Mapper\Drivers\MySqlColumnMapper;
-use GGermanBoldyrev\SchemaFile\Mapper\Drivers\PostgresColumnMapper;
-use GGermanBoldyrev\SchemaFile\Mapper\Drivers\SqliteColumnMapper;
+use GGermanBoldyrev\SchemaFile\Reader\Columns\ColumnMapperRegistry;
+use GGermanBoldyrev\SchemaFile\Reader\Columns\Drivers\MySqlColumnMapper;
+use GGermanBoldyrev\SchemaFile\Reader\Columns\Drivers\PostgresColumnMapper;
+use GGermanBoldyrev\SchemaFile\Reader\Columns\Drivers\SqliteColumnMapper;
 use Illuminate\Config\Repository;
 use Illuminate\Console\Events\CommandFinished;
 use Illuminate\Console\Events\CommandStarting;
@@ -20,7 +23,7 @@ use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * Wires the package into a Laravel application: its config, its settings object, its column mappers, its command and its migration listener.
+ * Wires the package into a Laravel application: its config, its settings object, its column mappers, its command with its operations and its migration listener.
  */
 final class SchemaFileServiceProvider extends ServiceProvider
 {
@@ -53,6 +56,18 @@ final class SchemaFileServiceProvider extends ServiceProvider
                 'mariadb' => new MySqlColumnMapper,
                 'pgsql' => new PostgresColumnMapper,
             ]),
+        );
+
+        // Built for each run of the command, so its operations get a generator made from the bindings
+        // as they are then. Writing is what runs when the command line asks for nothing else.
+        $this->app->bind(
+            OperationRegistry::class,
+            fn (Application $app): OperationRegistry => new OperationRegistry(
+                fallback: $app->make(WriteSchemaFile::class),
+                operations: [
+                    $app->make(CheckSchemaFile::class),
+                ],
+            ),
         );
     }
 

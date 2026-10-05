@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use GGermanBoldyrev\SchemaFile\Mapper\Drivers\SqliteColumnMapper;
-use GGermanBoldyrev\SchemaFile\Mapper\TableContext;
+use GGermanBoldyrev\SchemaFile\Reader\Columns\Drivers\SqliteColumnMapper;
+use GGermanBoldyrev\SchemaFile\Reader\Columns\TableContext;
 use GGermanBoldyrev\SchemaFile\Schema\Column;
 use GGermanBoldyrev\SchemaFile\Schema\Expression;
 use Illuminate\Database\SQLiteConnection;
